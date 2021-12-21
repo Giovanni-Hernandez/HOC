@@ -1,0 +1,62 @@
+/* Calculadora Hoc2 */
+package hoc2;
+import java_cup.runtime.*;
+import java.io.FileReader;
+
+class AnalizadorSintactico;
+
+parser code {:
+    FrmPrincipal frmInterfaz; /*= new FrmPrincipal();*/
+    Float variables[] = new Float[26];
+
+    public void report_error(String mensaje, Object info){
+        StringBuilder m = new StringBuilder("Error");
+        if(info instanceof java_cup.runtime.Symbol){
+            java_cup.runtime.Symbol s = (java_cup.runtime.Symbol) info;
+            if(s.left >=0){
+                m.append(" en la linea " + (s.left + 1));
+                if(s.right >=0)
+                    m.append(", columna " + (s.right + 1));
+            }
+        }
+        m.append("  : " + mensaje);
+        System.err.println(m);
+    }
+    public void report_fatal_error(String message, Object info){
+        report_error(message, info);
+        System.exit(1);
+    }
+:}
+
+
+terminal OpSuma, OpResta, OpProd, OpDiv, OpAsig;
+terminal ParIzq, ParDer, Enter;
+terminal Float NUM;
+terminal Integer VAR;
+terminal UMINUS;
+
+non terminal list;
+non terminal Float asgn, expr;
+
+/* Precedences */
+precedence right OpAsig;
+precedence left OpSuma, OpResta;
+precedence left OpProd, OpDiv;
+precedence left UMINUS;
+
+list    ::=
+        | list Enter          {: frmInterfaz.PonerTextSintac("Enters\n"); :}
+        | list expr:e Enter   {: frmInterfaz.PonerTextSintac(Float.toString(e) + "\n"); :}
+        ;
+asgn    ::= VAR:indVar OpAsig expr:valExpr  {: variables[indVar]=valExpr; RESULT=valExpr; :}
+        ;
+expr    ::= NUM:valNum  {: RESULT = valNum; :}
+        |   VAR:indVar  {: RESULT = variables[indVar]; :}
+        |   asgn:valAsgn    {: RESULT = valAsgn; :}
+        |   expr:e1 OpSuma expr:e2  {: RESULT = e1+e2; :}
+        |   expr:e1 OpResta expr:e2 {: RESULT = e1-e2; :}
+        |   expr:e1 OpProd expr:e2  {: RESULT = e1*e2; :}
+        |   expr:e1 OpDiv expr:e2   {: RESULT = e1/e2; :}
+        |   ParIzq expr:e ParDer    {: RESULT = e; :}
+        |   OpResta expr:e  {: RESULT = -e; :} %prec UMINUS
+        ;
